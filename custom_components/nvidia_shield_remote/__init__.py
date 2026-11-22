@@ -208,8 +208,20 @@ async def _call_client(func, *args: Any) -> Any:
             "NVIDIA Shield is not paired. Call request_pairing and submit_pin first."
         ) from err
     except ShieldConnectionError as err:
+        _LOGGER.warning(
+            "NVIDIA Shield operation failed for %s:%s: %s",
+            runtime.client.host,
+            runtime.client.port,
+            err,
+        )
         raise HomeAssistantError(str(err)) from err
     except ShieldProtocolError as err:
+        _LOGGER.warning(
+            "NVIDIA Shield operation failed for %s:%s: %s",
+            runtime.client.host,
+            runtime.client.port,
+            err,
+        )
         raise HomeAssistantError(str(err)) from err
     except Exception as err:
         _LOGGER.exception("Unexpected NVIDIA Shield Remote error")

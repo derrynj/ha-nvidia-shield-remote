@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import asyncio
+import logging
 import os
 import socket
 import ssl
@@ -26,6 +27,8 @@ from cryptography.hazmat.primitives.serialization import (
     PrivateFormat,
 )
 from cryptography.x509.oid import NameOID
+
+_LOGGER = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT = 5.0
 READ_TIMEOUT = 8.0
@@ -307,6 +310,11 @@ class ShieldProtocolClient:
                 for payload in payloads:
                     self._send_hex(sock, payload)
                 if not self._drain_command_replies(sock):
+                    _LOGGER.debug(
+                        "Shield at %s:%s closed the command connection",
+                        self.host,
+                        self.port,
+                    )
                     self._close_command_socket()
                 self.last_available = True
                 return
@@ -320,8 +328,18 @@ class ShieldProtocolClient:
                 self.last_available = False
                 self._close_command_socket()
                 if attempt == 0:
+                    _LOGGER.debug(
+                        "Command attempt %d to Shield at %s:%s failed; "
+                        "reconnecting: %s",
+                        attempt + 1,
+                        self.host,
+                        self.port,
+                        err,
+                    )
                     continue
-        raise ShieldConnectionError("Unable to send Shield command") from last_error
+        raise ShieldConnectionError(
+            f"Unable to send Shield command to {self.host}:{self.port}: {last_error}"
+        ) from last_error
 
     def _get_command_socket(self) -> ssl.SSLSocket:
         if self._command_socket is not None:
@@ -343,6 +361,11 @@ class ShieldProtocolClient:
             raise
 
         self._command_socket = sock
+        _LOGGER.debug(
+            "Connected to NVIDIA Shield command service at %s:%s",
+            self.host,
+            self.port,
+        )
         return sock
 
     def _open_socket(self, credentials: ShieldCredentials | None) -> ssl.SSLSocket:

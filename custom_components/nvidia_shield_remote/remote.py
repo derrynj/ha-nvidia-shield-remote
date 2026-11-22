@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterable
+import logging
 from typing import Any
 
 from homeassistant.components.remote import RemoteEntity
@@ -17,6 +18,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import ShieldRuntime
 from .const import DATA_ENTITY_MAP, DATA_RUNTIMES, DOMAIN
 from .protocol import ShieldConnectionError, ShieldNotPairedError, ShieldProtocolError
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
@@ -111,6 +114,12 @@ class NvidiaShieldRemoteEntity(RemoteEntity):
                 "and nvidia_shield_remote.submit_pin first."
             ) from err
         except (ShieldConnectionError, ShieldProtocolError) as err:
+            _LOGGER.warning(
+                "Remote command failed for NVIDIA Shield at %s:%s: %s",
+                self._runtime.client.host,
+                self._runtime.client.port,
+                err,
+            )
             raise HomeAssistantError(str(err)) from err
         finally:
             self.async_write_ha_state()
